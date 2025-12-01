@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../models/customer.dart';
-import '../services/api_service.dart';
+import '../services/firebase_service.dart';
 
 class CustomerProvider with ChangeNotifier {
   List<Customer> _customers = [];

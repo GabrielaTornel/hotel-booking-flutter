@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../models/room.dart';
-import '../services/api_service.dart';
+import '../services/firebase_service.dart';
 
 class RoomProvider with ChangeNotifier {
   List<Room> _rooms = [];
@@ -19,6 +19,9 @@ class RoomProvider with ChangeNotifier {
     int page = 1,
     int limit = 10,
   }) async {
+    // Evitar cargar si ya está cargando
+    if (_isLoading) return;
+    
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -34,10 +37,11 @@ class RoomProvider with ChangeNotifier {
       );
     } catch (e) {
       _error = e.toString();
+      print('Error cargando habitaciones: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
-
-    _isLoading = false;
-    notifyListeners();
   }
 
   Future<Room?> getRoomById(String id) async {

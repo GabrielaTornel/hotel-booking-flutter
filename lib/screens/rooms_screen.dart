@@ -124,19 +124,30 @@ class _RoomsScreenState extends State<RoomsScreen> {
                 }
 
                 if (filteredRooms.isEmpty) {
-                  return const Center(
+                  return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.bed_outlined,
                           size: 64,
                           color: Colors.grey,
                         ),
-                        SizedBox(height: 16),
-                        Text(
+                        const SizedBox(height: 16),
+                        const Text(
                           'No hay habitaciones',
                           style: TextStyle(fontSize: 18, color: Colors.grey),
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            _showAddRoomDialog();
+                          },
+                          icon: const Icon(Icons.add),
+                          label: const Text('Agregar Primera Habitación'),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          ),
                         ),
                       ],
                     ),
@@ -167,6 +178,15 @@ class _RoomsScreenState extends State<RoomsScreen> {
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          _showAddRoomDialog();
+        },
+        icon: const Icon(Icons.add),
+        label: const Text('Agregar Habitación'),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Colors.white,
+      ),
     );
   }
 
@@ -174,8 +194,30 @@ class _RoomsScreenState extends State<RoomsScreen> {
     showDialog(
       context: context,
       builder: (context) => _RoomFormDialog(
-        onSave: (room) {
-          Provider.of<RoomProvider>(context, listen: false).createRoom(room);
+        onSave: (room) async {
+          final roomProvider = Provider.of<RoomProvider>(context, listen: false);
+          final newRoom = await roomProvider.createRoom(room);
+          if (newRoom != null) {
+            // Recargar la lista de habitaciones para asegurar que se actualice
+            await roomProvider.loadRooms();
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Habitación agregada exitosamente'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+          } else {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Error al agregar habitación: ${roomProvider.error ?? "Error desconocido"}'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          }
         },
       ),
     );

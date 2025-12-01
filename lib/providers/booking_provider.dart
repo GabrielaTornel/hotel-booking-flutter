@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../models/booking.dart';
-import '../services/api_service.dart';
+import '../services/firebase_service.dart';
 
 class BookingProvider with ChangeNotifier {
   List<Booking> _bookings = [];
@@ -22,6 +22,9 @@ class BookingProvider with ChangeNotifier {
     int page = 1,
     int limit = 10,
   }) async {
+    // Evitar cargar si ya está cargando
+    if (_isLoading) return;
+    
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -38,10 +41,11 @@ class BookingProvider with ChangeNotifier {
       );
     } catch (e) {
       _error = e.toString();
+      print('Error cargando reservas: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
-
-    _isLoading = false;
-    notifyListeners();
   }
 
   Future<void> loadDashboardStats() async {

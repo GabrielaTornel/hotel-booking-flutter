@@ -6,6 +6,7 @@ import '../providers/room_provider.dart';
 import '../models/customer.dart';
 import '../models/room.dart';
 import '../models/booking.dart';
+import '../services/firebase_service.dart';
 
 class CheckInScreen extends StatefulWidget {
   const CheckInScreen({super.key});
@@ -31,6 +32,7 @@ class _CheckInScreenState extends State<CheckInScreen> with TickerProviderStateM
   final TextEditingController _nationalityController = TextEditingController();
   final TextEditingController _documentNumberController = TextEditingController();
   String _documentType = 'dni';
+  List<Map<String, dynamic>> _nationalities = [];
   
   Room? _selectedRoom;
   DateTime _checkInDate = DateTime.now();
@@ -56,6 +58,21 @@ class _CheckInScreenState extends State<CheckInScreen> with TickerProviderStateM
     _tabController = TabController(length: 2, vsync: this);
     _loadRooms();
     _loadAllBookings();
+    _loadNationalities();
+  }
+
+  Future<void> _loadNationalities() async {
+    try {
+      final response = await ApiService.getNationalities();
+      if (response['success']) {
+        setState(() {
+          _nationalities = (response['data']['nationalities'] as List)
+              .cast<Map<String, dynamic>>();
+        });
+      }
+    } catch (e) {
+      // Silently fail, nacionalities will be empty
+    }
   }
 
   @override
@@ -196,13 +213,13 @@ class _CheckInScreenState extends State<CheckInScreen> with TickerProviderStateM
     });
     
     try {
-      await Provider.of<BookingProvider>(context, listen: false)
-          .checkIn(booking.id!);
+      final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
+      await bookingProvider.checkIn(booking.id!);
+      
+      // Recargar todas las reservas para asegurar que se actualice la lista
+      await bookingProvider.loadBookings();
       
       _showMessage('Check-in realizado exitosamente', isError: false);
-      
-      // Actualizar la lista de resultados
-      _searchBookings();
     } catch (e) {
       _showMessage('Error realizando check-in: $e', isError: true);
     } finally {
@@ -322,6 +339,23 @@ class _CheckInScreenState extends State<CheckInScreen> with TickerProviderStateM
         backgroundColor: isError ? Colors.red : Colors.green,
       ),
     );
+  }
+
+  String _getStatusLabel(String status) {
+    switch (status) {
+      case 'pending':
+        return 'Pendiente';
+      case 'confirmed':
+        return 'Confirmada';
+      case 'checked_in':
+        return 'Check-in Realizado';
+      case 'checked_out':
+        return 'Check-out Realizado';
+      case 'cancelled':
+        return 'Cancelada';
+      default:
+        return status;
+    }
   }
 
   double _calculateTotal() {
@@ -531,8 +565,20 @@ class _CheckInScreenState extends State<CheckInScreen> with TickerProviderStateM
                           ],
                         ),
                         trailing: Chip(
-                          label: Text(booking.status == 'confirmed' ? 'Confirmada' : 'Pendiente'),
-                          backgroundColor: booking.status == 'confirmed' ? Colors.green : Colors.orange,
+                          label: Text(
+                            booking.status == 'checked_in' 
+                              ? 'Check-in Realizado' 
+                              : booking.status == 'confirmed' 
+                                ? 'Confirmada' 
+                                : booking.status == 'pending'
+                                  ? 'Pendiente'
+                                  : booking.status,
+                          ),
+                          backgroundColor: booking.status == 'checked_in' 
+                            ? Colors.blue 
+                            : booking.status == 'confirmed' 
+                              ? Colors.green 
+                              : Colors.orange,
                         ),
                         onTap: () => _showBookingDetails(booking),
                       ),
@@ -1145,12 +1191,24 @@ class _CheckInScreenState extends State<CheckInScreen> with TickerProviderStateM
         
         const SizedBox(height: 16),
         
-        TextField(
-          controller: _nationalityController,
+        DropdownButtonFormField<String>(
+          value: _nationalityController.text.isEmpty ? null : _nationalityController.text,
           decoration: const InputDecoration(
             labelText: 'Nacionalidad',
             border: OutlineInputBorder(),
           ),
+          items: _nationalities.map((nat) {
+            final name = nat['name'] as String? ?? '';
+            return DropdownMenuItem(
+              value: name,
+              child: Text(name),
+            );
+          }).toList(),
+          onChanged: (value) {
+            setState(() {
+              _nationalityController.text = value ?? '';
+            });
+          },
         ),
         
         const SizedBox(height: 16),
@@ -1185,7 +1243,7 @@ class _CheckInScreenState extends State<CheckInScreen> with TickerProviderStateM
             Text('Check-in: ${_formatDate(booking.checkIn)}'),
             Text('Check-out: ${_formatDate(booking.checkOut)}'),
             Text('Huéspedes: ${booking.guests.adults} adultos, ${booking.guests.children} niños'),
-            Text('Estado: ${booking.status}'),
+            Text('Estado: ${_getStatusLabel(booking.status)}'),
           ],
         ),
         actions: [
@@ -1193,13 +1251,20 @@ class _CheckInScreenState extends State<CheckInScreen> with TickerProviderStateM
             onPressed: () => Navigator.pop(context),
             child: const Text('Cerrar'),
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _checkInExisting(booking);
-            },
-            child: const Text('Check-in'),
-          ),
+          if (booking.status != 'checked_in')
+            ElevatedButton(
+              onPressed: _isProcessingCheckIn ? null : () {
+                Navigator.pop(context);
+                _checkInExisting(booking);
+              },
+              child: _isProcessingCheckIn
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  )
+                : const Text('Check-in'),
+            ),
         ],
       ),
     );

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/customer.dart';
 import '../models/country.dart';
 import '../models/department.dart';
-import '../services/api_service.dart';
+import '../services/firebase_service.dart';
 
 class ExtendedCustomerForm extends StatefulWidget {
   final Customer? customer;
@@ -62,6 +62,7 @@ class _ExtendedCustomerFormState extends State<ExtendedCustomerForm> {
   List<Country> _countries = [];
   List<Department> _departments = [];
   List<Companion> _companions = [];
+  List<Map<String, dynamic>> _nationalities = [];
   
   // bool _isLoadingCountries = false;
   // bool _isLoadingDepartments = false;
@@ -77,6 +78,7 @@ class _ExtendedCustomerFormState extends State<ExtendedCustomerForm> {
 
   void _loadInitialData() {
     _loadCountries();
+    _loadNationalities();
   }
 
   void _loadCustomerData() {
@@ -148,6 +150,22 @@ class _ExtendedCustomerFormState extends State<ExtendedCustomerForm> {
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error cargando departamentos: $e')),
+      );
+    }
+  }
+
+  Future<void> _loadNationalities() async {
+    try {
+      final response = await ApiService.getNationalities();
+      if (response['success']) {
+        setState(() {
+          _nationalities = (response['data']['nationalities'] as List)
+              .cast<Map<String, dynamic>>();
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error cargando nacionalidades: $e')),
       );
     }
   }
@@ -381,15 +399,27 @@ class _ExtendedCustomerFormState extends State<ExtendedCustomerForm> {
           Row(
             children: [
               Expanded(
-                child: TextFormField(
-                  controller: _nationalityController,
+                child: DropdownButtonFormField<String>(
+                  value: _nationalityController.text.isEmpty ? null : _nationalityController.text,
                   decoration: const InputDecoration(
                     labelText: 'Nacionalidad *',
                     border: OutlineInputBorder(),
                   ),
+                  items: _nationalities.map((nat) {
+                    final name = nat['name'] as String? ?? '';
+                    return DropdownMenuItem(
+                      value: name,
+                      child: Text(name),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _nationalityController.text = value ?? '';
+                    });
+                  },
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Por favor ingresa la nacionalidad';
+                      return 'Por favor selecciona la nacionalidad';
                     }
                     return null;
                   },
@@ -757,6 +787,7 @@ class _ExtendedCustomerFormState extends State<ExtendedCustomerForm> {
     showDialog(
       context: context,
       builder: (context) => _CompanionDialog(
+        nationalities: _nationalities,
         onSave: (companion) {
           setState(() {
             _companions.add(companion);
@@ -840,8 +871,12 @@ class _ExtendedCustomerFormState extends State<ExtendedCustomerForm> {
 
 class _CompanionDialog extends StatefulWidget {
   final Function(Companion) onSave;
+  final List<Map<String, dynamic>> nationalities;
 
-  const _CompanionDialog({required this.onSave});
+  const _CompanionDialog({
+    required this.onSave,
+    required this.nationalities,
+  });
 
   @override
   State<_CompanionDialog> createState() => _CompanionDialogState();
@@ -907,15 +942,27 @@ class _CompanionDialogState extends State<_CompanionDialog> {
                 },
               ),
               const SizedBox(height: 16),
-              TextFormField(
-                controller: _nationalityController,
+              DropdownButtonFormField<String>(
+                value: _nationalityController.text.isEmpty ? null : _nationalityController.text,
                 decoration: const InputDecoration(
                   labelText: 'Nacionalidad *',
                   border: OutlineInputBorder(),
                 ),
+                items: widget.nationalities.map((nat) {
+                  final name = nat['name'] as String? ?? '';
+                  return DropdownMenuItem(
+                    value: name,
+                    child: Text(name),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _nationalityController.text = value ?? '';
+                  });
+                },
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Por favor ingresa la nacionalidad';
+                    return 'Por favor selecciona la nacionalidad';
                   }
                   return null;
                 },

@@ -1,1 +1,0 @@
- C:\\Users\\Delfos\\Documents\\Hotel-A\\bookingmanager\\hotel-booking-flutter\\.dart_tool\\flutter_build\\587ed807e5c289014aff3e9ccf4ada2a\\native_assets.yaml: 
