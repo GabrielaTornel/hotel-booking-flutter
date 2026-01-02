@@ -56,9 +56,12 @@ class _CheckInScreenState extends State<CheckInScreen> with TickerProviderStateM
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _loadRooms();
-    _loadAllBookings();
-    _loadNationalities();
+    // Usar addPostFrameCallback para evitar setState durante build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadRooms();
+      _loadAllBookings();
+      _loadNationalities();
+    });
   }
 
   Future<void> _loadNationalities() async {
@@ -367,13 +370,7 @@ class _CheckInScreenState extends State<CheckInScreen> with TickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Check-in'),
-        backgroundColor: Colors.blue[800],
-        foregroundColor: Colors.white,
-      ),
-      body: Column(
+    return Column(
         children: [
           // Custom Tab Bar
           Container(
@@ -464,8 +461,7 @@ class _CheckInScreenState extends State<CheckInScreen> with TickerProviderStateM
             ),
           ),
         ],
-      ),
-    );
+      );
   }
 
   Widget _buildExistingBookingsTab() {

@@ -16,6 +16,14 @@ class BookingListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    print('🎫 BookingListTile build - bookingNumber: ${booking.bookingNumber}');
+    print('🎫 BookingListTile build - room: ${booking.room.number}');
+    print('🎫 BookingListTile build - room.isAvailable: ${booking.room.isAvailable} (type: ${booking.room.isAvailable.runtimeType})');
+    print('🎫 BookingListTile build - showActions: $showActions (type: ${showActions.runtimeType})');
+    
+    // Verificar que showActions sea bool válido (aunque ya es bool no-nullable)
+    final bool shouldShowActions = showActions;
+    
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
       child: ListTile(
@@ -43,7 +51,7 @@ class BookingListTile extends StatelessWidget {
             ),
           ],
         ),
-        trailing: showActions ? _buildActionButtons(context) : null,
+        trailing: shouldShowActions ? _buildActionButtons(context) : null,
       ),
     );
   }

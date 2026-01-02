@@ -30,25 +30,7 @@ class _RoomsScreenState extends State<RoomsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Habitaciones'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              Provider.of<RoomProvider>(context, listen: false).loadRooms();
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () {
-              _showAddRoomDialog();
-            },
-          ),
-        ],
-      ),
-      body: Column(
+    return Column(
         children: [
           // Filter Section
           Container(
@@ -177,17 +159,7 @@ class _RoomsScreenState extends State<RoomsScreen> {
             ),
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          _showAddRoomDialog();
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('Agregar Habitación'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
-      ),
-    );
+      );
   }
 
   void _showAddRoomDialog() {

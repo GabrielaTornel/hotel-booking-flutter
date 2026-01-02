@@ -167,8 +167,18 @@ class Preferences {
   });
 
   factory Preferences.fromJson(Map<String, dynamic> json) {
+    // Manejar smoking de forma segura
+    bool smokingValue = false;
+    if (json['smoking'] != null) {
+      if (json['smoking'] is bool) {
+        smokingValue = json['smoking'] as bool;
+      } else if (json['smoking'] is String) {
+        smokingValue = json['smoking'].toString().toLowerCase() == 'true';
+      }
+    }
+    
     return Preferences(
-      smoking: json['smoking'] ?? false,
+      smoking: smokingValue,
       specialRequests: json['specialRequests'],
     );
   }
@@ -195,9 +205,28 @@ class BillingInfo {
   });
 
   factory BillingInfo.fromJson(Map<String, dynamic> json) {
+    // Manejar campos booleanos de forma segura
+    bool invoiceValue = false;
+    if (json['requiresInvoice'] != null) {
+      if (json['requiresInvoice'] is bool) {
+        invoiceValue = json['requiresInvoice'] as bool;
+      } else if (json['requiresInvoice'] is String) {
+        invoiceValue = json['requiresInvoice'].toString().toLowerCase() == 'true';
+      }
+    }
+    
+    bool receiptValue = false;
+    if (json['requiresReceipt'] != null) {
+      if (json['requiresReceipt'] is bool) {
+        receiptValue = json['requiresReceipt'] as bool;
+      } else if (json['requiresReceipt'] is String) {
+        receiptValue = json['requiresReceipt'].toString().toLowerCase() == 'true';
+      }
+    }
+    
     return BillingInfo(
-      requiresInvoice: json['requiresInvoice'] ?? false,
-      requiresReceipt: json['requiresReceipt'] ?? false,
+      requiresInvoice: invoiceValue,
+      requiresReceipt: receiptValue,
       ruc: json['ruc'],
       businessName: json['businessName'],
     );
@@ -223,8 +252,18 @@ class ParkingInfo {
   });
 
   factory ParkingInfo.fromJson(Map<String, dynamic> json) {
+    // Manejar requiresParking de forma segura
+    bool parkingValue = false;
+    if (json['requiresParking'] != null) {
+      if (json['requiresParking'] is bool) {
+        parkingValue = json['requiresParking'] as bool;
+      } else if (json['requiresParking'] is String) {
+        parkingValue = json['requiresParking'].toString().toLowerCase() == 'true';
+      }
+    }
+    
     return ParkingInfo(
-      requiresParking: json['requiresParking'] ?? false,
+      requiresParking: parkingValue,
       licensePlate: json['licensePlate'],
     );
   }

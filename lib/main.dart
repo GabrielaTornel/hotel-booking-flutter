@@ -36,6 +36,7 @@ class HotelBookingApp extends StatelessWidget {
       ],
       child: MaterialApp(
         title: 'Hotel Anthony\'s - Sistema de Gestión',
+        debugShowCheckedModeBanner: false,
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(
             seedColor: const Color(0xFF802020), // Color borgoña del logo

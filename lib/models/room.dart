@@ -30,6 +30,27 @@ class Room {
   });
 
   factory Room.fromJson(Map<String, dynamic> json) {
+    print('    🏨 Room.fromJson - isAvailable raw: ${json['isAvailable']} (type: ${json['isAvailable']?.runtimeType})');
+    
+    // Manejar isAvailable de forma segura
+    bool available = true;
+    if (json['isAvailable'] != null) {
+      if (json['isAvailable'] is bool) {
+        available = json['isAvailable'] as bool;
+        print('    ✅ isAvailable es bool: $available');
+      } else if (json['isAvailable'] is String) {
+        available = json['isAvailable'].toString().toLowerCase() == 'true';
+        print('    ✅ isAvailable era string, convertido a bool: $available');
+      } else {
+        print('    ⚠️ isAvailable tiene tipo inesperado: ${json['isAvailable'].runtimeType}, usando true por defecto');
+        available = true;
+      }
+    } else {
+      print('    ⚠️ isAvailable es null, usando true por defecto');
+    }
+    
+    print('    ✅ Room.fromJson - isAvailable final: $available');
+    
     return Room(
       id: json['_id'] ?? json['id'] ?? '',
       number: json['number'] ?? '',
@@ -39,7 +60,7 @@ class Room {
       capacity: json['capacity'] ?? 0,
       amenities: List<String>.from(json['amenities'] ?? []),
       images: List<String>.from(json['images'] ?? []),
-      isAvailable: json['isAvailable'] ?? true,
+      isAvailable: available,
       description: json['description'],
       floor: json['floor'] ?? 0,
       createdAt: json['createdAt'] != null 

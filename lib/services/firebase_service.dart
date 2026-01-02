@@ -430,18 +430,57 @@ class FirebaseService {
       query = query.orderBy('createdAt', descending: true);
 
       final snapshot = await query.get();
-      final bookings = snapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        return Booking.fromJson({
-          '_id': doc.id,
-          'id': doc.id,
-          ...data,
-          'checkIn': _convertTimestamp(data['checkIn'] as Timestamp?)?.toIso8601String(),
-          'checkOut': _convertTimestamp(data['checkOut'] as Timestamp?)?.toIso8601String(),
-          'createdAt': _convertTimestamp(data['createdAt'] as Timestamp?)?.toIso8601String(),
-          'updatedAt': _convertTimestamp(data['updatedAt'] as Timestamp?)?.toIso8601String(),
-        });
-      }).toList();
+      print('📋 Obtenidas ${snapshot.docs.length} reservas de Firestore');
+      final bookings = <Booking>[];
+      
+      for (final doc in snapshot.docs) {
+        try {
+          print('\n🔄 Procesando reserva: ${doc.id}');
+          final data = doc.data() as Map<String, dynamic>;
+          print('  📊 Data keys: ${data.keys.toList()}');
+          
+          // Asegurar que room tenga isAvailable si viene como objeto
+          if (data['room'] != null) {
+            print('  🛏️ Room presente, tipo: ${data['room'].runtimeType}');
+            if (data['room'] is Map<String, dynamic>) {
+              final roomData = data['room'] as Map<String, dynamic>;
+              print('  🛏️ Room es objeto, keys: ${roomData.keys.toList()}');
+              print('  🛏️ Room isAvailable: ${roomData['isAvailable']} (type: ${roomData['isAvailable']?.runtimeType})');
+              
+              if (!roomData.containsKey('isAvailable') || roomData['isAvailable'] == null) {
+                print('  ⚠️ Room isAvailable es null, estableciendo a true');
+                roomData['isAvailable'] = true;
+              } else if (roomData['isAvailable'] is! bool) {
+                print('  ⚠️ Room isAvailable no es bool, convirtiendo...');
+                roomData['isAvailable'] = roomData['isAvailable'].toString().toLowerCase() == 'true';
+              }
+            } else {
+              print('  🛏️ Room es ${data['room'].runtimeType}, será manejado en Booking.fromJson');
+            }
+          } else {
+            print('  ⚠️ Room es null en Firestore');
+          }
+          
+          final booking = Booking.fromJson({
+            '_id': doc.id,
+            'id': doc.id,
+            ...data,
+            'checkIn': _convertTimestamp(data['checkIn'] as Timestamp?)?.toIso8601String(),
+            'checkOut': _convertTimestamp(data['checkOut'] as Timestamp?)?.toIso8601String(),
+            'createdAt': _convertTimestamp(data['createdAt'] as Timestamp?)?.toIso8601String(),
+            'updatedAt': _convertTimestamp(data['updatedAt'] as Timestamp?)?.toIso8601String(),
+          });
+          
+          print('  ✅ Reserva parseada exitosamente');
+          bookings.add(booking);
+        } catch (e, stackTrace) {
+          print('❌ Error parseando reserva ${doc.id}: $e');
+          print('Stack trace: $stackTrace');
+          // Continuar con la siguiente reserva en lugar de fallar completamente
+        }
+      }
+      
+      print('\n✅ Total de reservas parseadas: ${bookings.length}');
 
       return bookings;
     } catch (e) {
@@ -647,6 +686,7 @@ class FirebaseService {
   /// Obtener estadísticas del dashboard
   static Future<Map<String, dynamic>> getDashboardStats() async {
     try {
+      print('📊 Obteniendo estadísticas del dashboard...');
       final bookingsSnapshot = await _firestore.collection('bookings').get();
       final roomsSnapshot = await _firestore.collection('rooms').get();
       final customersSnapshot = await _firestore.collection('customers').get();
@@ -660,17 +700,23 @@ class FirebaseService {
       int checkedInBookings = 0;
       int todayCheckIns = 0;
       int todayCheckOuts = 0;
+      int todayBookings = 0;
+      int pendingCheckIns = 0;
 
       for (var doc in bookingsSnapshot.docs) {
         final data = doc.data();
         final status = data['status'] as String?;
         
         if (status == 'pending') pendingBookings++;
-        if (status == 'confirmed') confirmedBookings++;
+        if (status == 'confirmed') {
+          confirmedBookings++;
+          pendingCheckIns++;
+        }
         if (status == 'checked_in') checkedInBookings++;
 
         final checkIn = _convertTimestamp(data['checkIn'] as Timestamp?);
         final checkOut = _convertTimestamp(data['checkOut'] as Timestamp?);
+        final createdAt = _convertTimestamp(data['createdAt'] as Timestamp?);
 
         if (checkIn != null) {
           final checkInDate = DateTime(checkIn.year, checkIn.month, checkIn.day);
@@ -685,7 +731,50 @@ class FirebaseService {
             todayCheckOuts++;
           }
         }
+
+        if (createdAt != null) {
+          final createdDate = DateTime(createdAt.year, createdAt.month, createdAt.day);
+          if (createdDate.isAtSameMomentAs(today)) {
+            todayBookings++;
+          }
+        }
       }
+
+      // Calcular habitaciones disponibles y ocupadas
+      int availableRooms = 0;
+      int occupiedRooms = 0;
+      
+      for (var doc in roomsSnapshot.docs) {
+        try {
+          final data = doc.data();
+          // Manejar isAvailable de forma segura
+          bool isAvailable = true;
+          if (data['isAvailable'] != null) {
+            if (data['isAvailable'] is bool) {
+              isAvailable = data['isAvailable'] as bool;
+            } else if (data['isAvailable'] is String) {
+              isAvailable = data['isAvailable'].toString().toLowerCase() == 'true';
+            }
+          }
+          
+          if (isAvailable) {
+            availableRooms++;
+          } else {
+            occupiedRooms++;
+          }
+        } catch (e) {
+          print('⚠️ Error procesando habitación ${doc.id}: $e');
+          // Si hay error, asumir disponible
+          availableRooms++;
+        }
+      }
+
+      print('📊 Estadísticas calculadas:');
+      print('  - Total reservas: $totalBookings');
+      print('  - Reservas hoy: $todayBookings');
+      print('  - Check-ins pendientes: $pendingCheckIns');
+      print('  - Habitaciones disponibles: $availableRooms');
+      print('  - Habitaciones ocupadas: $occupiedRooms');
 
       return {
         'totalBookings': totalBookings,
@@ -694,10 +783,16 @@ class FirebaseService {
         'checkedInBookings': checkedInBookings,
         'todayCheckIns': todayCheckIns,
         'todayCheckOuts': todayCheckOuts,
+        'todayBookings': todayBookings,
+        'pendingCheckIns': pendingCheckIns,
+        'availableRooms': availableRooms,
+        'occupiedRooms': occupiedRooms,
         'totalRooms': roomsSnapshot.docs.length,
         'totalCustomers': customersSnapshot.docs.length,
       };
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('❌ Error al obtener estadísticas: $e');
+      print('Stack trace: $stackTrace');
       throw Exception('Error al obtener estadísticas: ${e.toString()}');
     }
   }

@@ -42,9 +42,12 @@ class Booking {
   });
 
   factory Booking.fromJson(Map<String, dynamic> json) {
+    print('📦 Parseando Booking desde JSON: ${json['_id'] ?? json['id']}');
+    
     // Manejar el caso donde customer o room pueden ser strings (IDs) en lugar de objetos
     Map<String, dynamic> customerData = {};
     if (json['customer'] != null) {
+      print('  👤 Customer type: ${json['customer'].runtimeType}');
       if (json['customer'] is Map<String, dynamic>) {
         customerData = json['customer'];
       } else {
@@ -61,18 +64,54 @@ class Booking {
 
     Map<String, dynamic> roomData = {};
     if (json['room'] != null) {
+      print('  🛏️ Room type: ${json['room'].runtimeType}');
       if (json['room'] is Map<String, dynamic>) {
         roomData = json['room'];
+        print('  🛏️ Room data keys: ${roomData.keys.toList()}');
+        print('  🛏️ Room isAvailable value: ${roomData['isAvailable']} (type: ${roomData['isAvailable']?.runtimeType})');
+        
+        // Asegurar que isAvailable existe y es bool
+        if (!roomData.containsKey('isAvailable') || roomData['isAvailable'] == null) {
+          print('  ⚠️ isAvailable es null o no existe, estableciendo a true');
+          roomData['isAvailable'] = true;
+        } else if (roomData['isAvailable'] is! bool) {
+          print('  ⚠️ isAvailable no es bool, convirtiendo...');
+          roomData['isAvailable'] = roomData['isAvailable'].toString().toLowerCase() == 'true';
+        }
       } else {
+        print('  🛏️ Room es string/ID, creando room básico');
         // Si es un string (ID), crear un room básico
         roomData = {
           'id': json['room'],
           'number': 'N/A',
           'type': 'standard',
-          'price': 0.0
+          'price': 0.0,
+          'isAvailable': true,
+          'currency': 'USD',
+          'capacity': 1,
+          'amenities': [],
+          'images': [],
+          'floor': 0,
         };
       }
+    } else {
+      print('  ⚠️ Room es null, creando room básico');
+      // Si room es null, crear un room básico
+      roomData = {
+        'id': '',
+        'number': 'N/A',
+        'type': 'standard',
+        'price': 0.0,
+        'isAvailable': true,
+        'currency': 'USD',
+        'capacity': 1,
+        'amenities': [],
+        'images': [],
+        'floor': 0,
+      };
     }
+    
+    print('  ✅ Room data final - isAvailable: ${roomData['isAvailable']} (type: ${roomData['isAvailable'].runtimeType})');
 
     Map<String, dynamic>? createdByData;
     if (json['createdBy'] != null) {

@@ -32,25 +32,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Reservas'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              Provider.of<BookingProvider>(context, listen: false).loadBookings();
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () {
-              // TODO: Navigate to create booking
-            },
-          ),
-        ],
-      ),
-      body: Column(
+    return Column(
         children: [
           // Filter Section
           Container(
@@ -88,11 +70,16 @@ class _BookingsScreenState extends State<BookingsScreen> {
           Expanded(
             child: Consumer<BookingProvider>(
               builder: (context, bookingProvider, child) {
+                print('📋 BookingsScreen build - isLoading: ${bookingProvider.isLoading}, error: ${bookingProvider.error}');
+                print('📋 BookingsScreen build - bookings count: ${bookingProvider.bookings.length}');
+                
                 if (bookingProvider.isLoading) {
+                  print('📋 Mostrando loading...');
                   return const Center(child: CircularProgressIndicator());
                 }
 
                 if (bookingProvider.error != null) {
+                  print('📋 Mostrando error: ${bookingProvider.error}');
                   return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -121,12 +108,15 @@ class _BookingsScreenState extends State<BookingsScreen> {
                   );
                 }
 
+                print('📋 Filtrando reservas por estado: $_selectedStatus');
                 List<dynamic> filteredBookings = bookingProvider.bookings;
                 if (_selectedStatus != 'all') {
                   filteredBookings = bookingProvider.getBookingsByStatus(_selectedStatus);
                 }
+                print('📋 Reservas filtradas: ${filteredBookings.length}');
 
                 if (filteredBookings.isEmpty) {
+                  print('📋 No hay reservas, mostrando mensaje vacío');
                   return const Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -146,25 +136,39 @@ class _BookingsScreenState extends State<BookingsScreen> {
                   );
                 }
 
+                print('📋 Construyendo ListView con ${filteredBookings.length} reservas');
                 return ListView.builder(
                   itemCount: filteredBookings.length,
                   itemBuilder: (context, index) {
-                    final booking = filteredBookings[index];
-                    return BookingListTile(
-                      booking: booking,
-                      showActions: true,
-                      onTap: () {
-                        _showBookingDetails(context, booking);
-                      },
-                    );
+                    try {
+                      print('📋 Construyendo item $index de ${filteredBookings.length}');
+                      final booking = filteredBookings[index];
+                      print('📋 Booking ${index}: ${booking.bookingNumber}, room: ${booking.room?.number ?? 'null'}, room.isAvailable: ${booking.room?.isAvailable}');
+                      
+                      return BookingListTile(
+                        booking: booking,
+                        showActions: true,
+                        onTap: () {
+                          _showBookingDetails(context, booking);
+                        },
+                      );
+                    } catch (e, stackTrace) {
+                      print('❌ Error construyendo item $index: $e');
+                      print('Stack trace: $stackTrace');
+                      return Card(
+                        child: ListTile(
+                          title: Text('Error en reserva $index'),
+                          subtitle: Text('$e'),
+                        ),
+                      );
+                    }
                   },
                 );
               },
             ),
           ),
         ],
-      ),
-    );
+      );
   }
 
   void _filterBookings() {

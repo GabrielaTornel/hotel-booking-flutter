@@ -50,11 +50,23 @@ class BookingProvider with ChangeNotifier {
 
   Future<void> loadDashboardStats() async {
     try {
+      print('📊 BookingProvider.loadDashboardStats() iniciado');
       final response = await ApiService.getDashboardStats();
-      if (response['success']) {
-        _dashboardStats = response['data'];
+      print('📊 BookingProvider.loadDashboardStats() - response recibido: ${response.keys.toList()}');
+      
+      // FirebaseService.getDashboardStats() retorna directamente el mapa de estadísticas
+      // No tiene estructura {success: true, data: {...}}
+      if (response.containsKey('totalBookings')) {
+        _dashboardStats = response;
+        print('📊 BookingProvider.loadDashboardStats() - estadísticas guardadas');
+      } else {
+        print('⚠️ BookingProvider.loadDashboardStats() - respuesta no tiene formato esperado');
+        _dashboardStats = response;
       }
-    } catch (e) {
+      _error = null; // Limpiar error si se cargó correctamente
+    } catch (e, stackTrace) {
+      print('❌ Error en loadDashboardStats: $e');
+      print('Stack trace: $stackTrace');
       _error = e.toString();
     }
     notifyListeners();
